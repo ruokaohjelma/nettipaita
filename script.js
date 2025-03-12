@@ -121,27 +121,15 @@ function drawSpots() {
     });
 }
 
-// Hiiren tai sormen liikkeen käsittely (poistetaan täplä, jos kursori/sormi menee sen päälle)
-function handleMove(event) {
-    event.preventDefault(); // Estetään oletustapahtumat
+// Hiiren liikkeen käsittely (poistetaan täplä, jos kursori menee sen päälle)
+function handleMouseMove(event) {
+    const mouseX = event.clientX;
+    const mouseY = event.clientY;
 
-    let mouseX, mouseY;
-
-    if (event.type === 'mousemove') {
-        // Hiiren tapahtuma
-        mouseX = event.clientX;
-        mouseY = event.clientY;
-    } else if (event.type === 'touchmove') {
-        // Kosketustapahtuma
-        const touch = event.touches[0]; // Oletetaan, että käytetään vain yhtä sormea
-        mouseX = touch.clientX;
-        mouseY = touch.clientY;
-    }
-
-    // Tarkistetaan osuuko kursori/sormi täplään
+    // Tarkistetaan osuuko kursori täplään
     sweater.spots = sweater.spots.filter(spot => {
         const dist = Math.hypot(spot.x + 10 - mouseX, spot.y + 10 - mouseY); // Täplän keskipisteen etäisyys
-        if (dist <= 10) { // Jos kursori/sormi osuu täplään
+        if (dist <= 10) { // Jos kursori osuu täplään
             sounds.pop.play(); // Soitetaan pois.wav ääni
             removedSpots++; // Kasvatetaan poistettujen täplien määrä
             return false; // Poistetaan täplä
@@ -157,39 +145,61 @@ function handleMove(event) {
     }
 }
 
-// Kosketustapahtumien kuuntelu
-canvas.addEventListener('mousemove', handleMove); // Hiiren liikkumisen kuuntelu
-canvas.addEventListener('touchmove', handleMove, { passive: false }); // Kosketusliikkeen kuuntelu
-
-// Kosketustapahtuman aloitus (touchstart) kosketuksessa
-canvas.addEventListener('touchstart', function(event) {
-    // Kosketuksen aloitus, ehkä voimme myös käsitellä sen samalla tavalla kuin 'mousemove' jos halutaan lisätä sormeen kosketus ja tehdä se alusta asti
-    handleMove(event);
-}, { passive: false });
-
 // Näytetään hyvin.png keskellä ja skaalattuna 2x
 function showHyvinImage() {
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Tyhjennetään canvas
-    ctx.drawImage(images.hyvin, canvas.width / 2 - (images.hyvin.width * 2) / 2, canvas.height / 2 - (images.hyvin.height * 2) / 2, images.hyvin.width * 2, images.hyvin.height * 2); 
+    ctx.drawImage(images.hyvin, canvas.width / 2 - (images.hyvin.width * 2) / 2, canvas.height / 2 - (images.hyvin.height * 2) / 2, images.hyvin.width * 2, images.hyvin.height * 2); // Piirretään hyvin.png skaalattuna 2x
 }
 
-// Pelin resetointi
+// Aloitetaan peli alusta
 function resetGame() {
-    removedSpots = 0; // Poistettujen täplien laskuri
-    sweater.spots = []; // Tyhjennetään täplälistaus
+    removedSpots = 0; // Nollataan poistettujen täplien määrä
+    sweater.spots = []; // Tyhjennetään täplät
     showHyvin = false; // Piilotetaan hyvin.png
-    isGameOver = false; // Pelin lopetus pois
-    level = 1; // Peli aloittaa ensimmäiseltä tasolta
-    addSpotInterval = setInterval(addSpot, spotFrequency); // Täplän lisäys interval
-    requiredSpots = 6; // Poistettavat täplät
-    spotFrequency = 2000; // Täplän ilmestymisväli ensimmäisellä kierroksella
+    level++; // Siirrytään seuraavalle tasolle
+    if (level === 2) {
+        spotFrequency = 1600; // Täplien ilmestymisväli 1600ms toisella kierroksella
+        requiredSpots = 10; // Poistettavat täplät toisella kierroksella
+    } else if (level === 3) {
+        spotFrequency = 1400; // Täplien ilmestymisväli 1400ms kolmannella kierroksella
+        requiredSpots = 25; // Poistettavat täplät kolmannella kierroksella
+    } else if (level === 4) {
+        spotFrequency = 1200; // Täplien ilmestymisväli 1200ms neljännellä kierroksella
+        requiredSpots = 30; // Poistettavat täplät neljännellä kierroksella
+    } else if (level >= 5) {
+        spotFrequency = 50; // Täplien ilmestymisväli 50ms kaaosvaiheessa
+        requiredSpots = 1000; // Ei enää poistaa täpliä
+    }
+    clearInterval(addSpotInterval); // Poistetaan vanha interval
+    addSpotInterval = setInterval(addSpot, spotFrequency); // Käynnistetään täplien lisäys interval uudella nopeudella
 }
 
-// Alustetaan peli
-function startGame() {
-    // Käynnistetään täplän ilmestymisintervalleja
-    addSpotInterval = setInterval(addSpot, spotFrequency);
+// Piirretään poistettujen täplien laskuri
+function drawCounter() {
+    ctx.font = 'bold 40px Arial'; // Arial Bold fontti
+    ctx.fillStyle = 'black'; // Laskurin väri
+    ctx.textAlign = 'center'; // Keskitetään teksti
+    ctx.fillText(`${removedSpots}`, canvas.width / 2, sweater.y + sweater.height + 40); // Piirretään laskuri ilman sanaa "poistettu"
 }
 
-// Pelin käynnistys
-startGame();
+// Animaatiofunktio
+function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Tyhjennetään canvas
+
+    if (!showHyvin) {
+        drawSweater();  // Piirretään paita
+        drawHands();    // Piirretään kädet
+        drawSpots();    // Piirretään täplät
+        drawCounter();  // Piirretään laskuri
+    } else {
+        showHyvinImage(); // Näytetään hyvin.png
+    }
+
+    requestAnimationFrame(animate); // Animaation toisto
+}
+
+canvas.addEventListener('mousemove', handleMouseMove); // Kuunnellaan hiiren liikkumista
+
+// Käynnistetään peli alusta
+resetGame();
+animate(); // Aloitetaan animaatio
