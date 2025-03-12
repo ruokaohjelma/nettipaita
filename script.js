@@ -123,8 +123,7 @@ function drawSpots() {
 
 // Hiiren tai sormen liikkeen käsittely (poistetaan täplä, jos kursori/sormi menee sen päälle)
 function handleMove(event) {
-    // Estetään oletustapahtumat (mobiililaitteilla, kuten zoomaus ja sivun vieritys)
-    event.preventDefault();
+    event.preventDefault(); // Estetään oletustapahtumat
 
     let mouseX, mouseY;
 
